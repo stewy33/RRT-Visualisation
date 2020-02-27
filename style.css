@@ -1,0 +1,27 @@
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+h1 {
+  font-size: 35px;
+}
+
+d-title {
+  padding-top: 2vh;
+  padding-bottom: 0vh;
+  height: 98vh;
+}
+
+.rrt-figure {
+  display: flex;
+  justify-content: center;
+  grid-column: screen;
+  text-align: center;
+  background-color: hsl(200, 20%, 97%);
+  border-top: 1px solid hsla(0, 0%, 0%, 0.1);
+  border-bottom: 1px solid hsla(0, 0%, 0%, 0.1);
+  padding: 30px 0;
+}
