@@ -17,8 +17,14 @@ class Node {
   }
 
   render() {
-    if (this.parent) {
-      ctx.moveTo(this.parent.x, this.parent.y);
+    // Render with respect to list of parents if present, otherwise, render single parent
+    const parents = this.parents
+      ? this.parents
+      : this.parent
+      ? [this.parent]
+      : [];
+    for (let i = 0; i < parents.length; i++) {
+      ctx.moveTo(parents[i].x, parents[i].y);
       ctx.lineWidth = 0.5;
       ctx.lineTo(this.x, this.y);
       ctx.stroke();
@@ -43,11 +49,12 @@ class RRT {
     this.validArea = validArea;
     this.maxEdgeLength = maxEdgeLength;
 
-    // Create and add start and goal nodes to tree
+    // Create and add start and goal nodes (but don't add goal to quadtree)
     this.startNode = new Node(startNodePos[0], startNodePos[1]);
     this.goalNode = new Node(goalNodePos[0], goalNodePos[1]);
+    this.goalNode.parents = [];
     this.nodes = [this.startNode, this.goalNode];
-    this.quadTree.addAll([this.startNode, this.goalNode]);
+    this.quadTree.add(this.startNode);
     this.dirtyNodes = [this.startNode, this.goalNode];
   }
 
@@ -65,36 +72,29 @@ class RRT {
 
   // Creates a node at (x, y) with the nearest node as its parent
   extend(x, y) {
-    let parent = this.quadTree.find(x, y);
+    const parent = this.quadTree.find(x, y);
 
     // Limit maximum edge length while keeping same heading
     const distToNearestNode = Math.sqrt(
       Math.pow(x - parent.x, 2) + Math.pow(y - parent.y, 2)
     );
-
-    if (distToNearestNode < 0.01) {
-      x = parent.x;
-      y = parent.y;
-
-      // Little hack to find second closest node and assign to parent
-      const oldParent = parent;
-      this.quadTree.remove(oldParent);
-      parent = this.quadTree.find(x, y);
-      this.quadTree.add(oldParent);
-    }
-
     if (distToNearestNode > this.maxEdgeLength) {
       x = parent.x + (this.maxEdgeLength / distToNearestNode) * (x - parent.x);
       y = parent.y + (this.maxEdgeLength / distToNearestNode) * (y - parent.y);
     }
 
-    // Create newNode and add to tree
-    const newNode = new Node(x, y, parent);
-    this.nodes.push(newNode);
-    this.quadTree.add(newNode);
-    this.dirtyNodes.push(newNode);
-
-    return newNode;
+    // Special behavior if we reach the goal node
+    if (x == this.goalNode.x && y == this.goalNode.y) {
+      parent.children.push(this.goalNode);
+      this.goalNode.parents.push(parent);
+      this.dirtyNodes.push(this.goalNode);
+      // Create newNode and add to tree
+    } else {
+      const newNode = new Node(x, y, parent);
+      this.nodes.push(newNode);
+      this.quadTree.add(newNode);
+      this.dirtyNodes.push(newNode);
+    }
   }
 
   render() {
