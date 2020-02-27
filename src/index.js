@@ -44,14 +44,19 @@ class RRT {
     this.maxEdgeLength = maxEdgeLength;
 
     // Create and add start and goal nodes to tree
-    const startNode = new Node(startNodePos[0], startNodePos[1]);
-    const goalNode = new Node(goalNodePos[0], goalNodePos[1]);
-    this.nodes = [startNode, goalNode];
-    this.quadTree.addAll([startNode, goalNode]);
-    this.dirtyNodes = [startNode, goalNode];
+    this.startNode = new Node(startNodePos[0], startNodePos[1]);
+    this.goalNode = new Node(goalNodePos[0], goalNodePos[1]);
+    this.nodes = [this.startNode, this.goalNode];
+    this.quadTree.addAll([this.startNode, this.goalNode]);
+    this.dirtyNodes = [this.startNode, this.goalNode];
   }
 
   sampleLocation() {
+    // Goal-biased sampling (10% prob of choosing goal node as sampling location)
+    if (Math.random() < 0.1) {
+      return [this.goalNode.x, this.goalNode.y];
+    }
+
     return [
       this.validArea[0] * (0.98 * Math.random() + 0.01),
       this.validArea[1] * (0.98 * Math.random() + 0.01)
@@ -60,12 +65,24 @@ class RRT {
 
   // Creates a node at (x, y) with the nearest node as its parent
   extend(x, y) {
-    const parent = this.quadTree.find(x, y);
+    let parent = this.quadTree.find(x, y);
 
     // Limit maximum edge length while keeping same heading
     const distToNearestNode = Math.sqrt(
       Math.pow(x - parent.x, 2) + Math.pow(y - parent.y, 2)
     );
+
+    if (distToNearestNode < 0.01) {
+      x = parent.x;
+      y = parent.y;
+
+      // Little hack to find second closest node and assign to parent
+      const oldParent = parent;
+      this.quadTree.remove(oldParent);
+      parent = this.quadTree.find(x, y);
+      this.quadTree.add(oldParent);
+    }
+
     if (distToNearestNode > this.maxEdgeLength) {
       x = parent.x + (this.maxEdgeLength / distToNearestNode) * (x - parent.x);
       y = parent.y + (this.maxEdgeLength / distToNearestNode) * (y - parent.y);
